@@ -4,7 +4,7 @@
 [![GitHub Actions]](https://github.com/yangby-cryptape/rust-property/actions)
 [![Crate Badge]](https://crates.io/crates/property)
 [![Crate Doc]](https://docs.rs/property)
-[![MSRV 1.31.0]][Rust 1.31.0]
+[![MSRV 1.87.0]][Rust 1.87.0]
 
 Generate several common methods for structs automatically.
 
