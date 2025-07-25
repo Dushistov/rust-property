@@ -18,11 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: 1.52.0
-          override: true
           components: rustfmt
       - name: Run
         run: cargo fmt --all -- --check
@@ -32,11 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: 1.52.0
-          override: true
           components: clippy
       - name: Run
         run: cargo clippy -- --deny warnings
@@ -58,17 +54,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup (stable)
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
           components: rustfmt, clippy
       - name: Setup (nightly)
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: nightly
+          components: clippy
       - name: CacheKey (cargo-expand)
         id: cache-key
         run: echo "::set-output name=yyyymm::$(/bin/date -u "+%Y%m")"
