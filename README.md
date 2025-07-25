@@ -36,7 +36,7 @@ If no properties is set, the default properties will be applied:
 )]
 ```
 
-There are six kinds of configurable properties: `skip`, `get`, `set`, `mut`, `clr` and `ord`.
+There are five kinds of configurable properties: `skip`, `get`, `set`, `mut` and `clr`.
 
 - If the `skip` property is set, no methods will be generated.
 
@@ -80,21 +80,6 @@ There are six kinds of configurable properties: `skip`, `get`, `set`, `mut`, `cl
 
   - `all`: will generate `clr` method for all types.
 
-- If there are more than one filed have the `ord` property, the [`PartialEq`] and [`PartialOrd`] will be implemented automatically.
-
-  - A serial number is required for the `ord` field property, it's an unsigned number with a `_` prefix.
-
-    The serial numbers could be noncontinuous, but any two number of these could not be equal.
-
-    No serial number is allowed if the `ord` property is a container property.
-
-  - There are two kind of sort types: `asc` and `desc`.
-
-    The default is ascending (`asc`), it can be changed to descending if the `desc` was set.
-
-[`PartialEq`]: https://doc.rust-lang.org/std/cmp/trait.PartialEq.html
-[`PartialOrd`]: https://doc.rust-lang.org/std/cmp/trait.PartialOrd.html
-
 ## In Action
 
 ### Original Code
@@ -121,16 +106,16 @@ pub enum Species {
 }
 
 #[derive(Property)]
-#[property(get(public), ord(desc), clr(scope = "option"), set(private), mut(disable))]
+#[property(get(public), clr(scope = "option"), set(private), mut(disable))]
 pub struct Pet {
-    #[property(get(name = "identification"), set(disable), ord(asc, _2))]
+    #[property(get(name = "identification"), set(disable))]
     id: [u8; 32],
     name: String,
-    #[property(set(crate, type = "own"), ord(_0))]
+    #[property(set(crate, type = "own"))]
     age: u32,
     #[property(get(type = "copy"))]
     species: Species,
-    #[property(get(prefix = "is_"), ord(_1))]
+    #[property(get(prefix = "is_"))]
     died: bool,
     #[property(get(type = "clone"), set(type = "none"))]
     owner: String,
@@ -262,28 +247,6 @@ impl Pet {
     #[inline]
     pub(crate) fn clear_price(&mut self) {
         self.price = None;
-    }
-}
-impl PartialEq for Pet {
-    fn eq(&self, other: &Self) -> bool {
-        self.age == other.age && self.died == other.died && self.id == other.id
-    }
-}
-impl PartialOrd for Pet {
-    fn partial_cmp(&self, other: &Self) -> Option<::core::cmp::Ordering> {
-        let result = other.age.partial_cmp(&self.age);
-        if result != Some(::core::cmp::Ordering::Equal) {
-            return result;
-        }
-        let result = other.died.partial_cmp(&self.died);
-        if result != Some(::core::cmp::Ordering::Equal) {
-            return result;
-        }
-        let result = self.id.partial_cmp(&other.id);
-        if result != Some(::core::cmp::Ordering::Equal) {
-            return result;
-        }
-        Some(::core::cmp::Ordering::Equal)
     }
 }
 ```
