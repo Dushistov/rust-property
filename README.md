@@ -263,4 +263,4 @@ Licensed under either of [Apache License, Version 2.0] or [MIT License], at your
 
 [Apache License, Version 2.0]: LICENSE-APACHE
 [MIT License]: LICENSE-MIT
-[Rust 1.31.0]: https://blog.rust-lang.org/2018/12/06/Rust-1.31-and-rust-2018.html
+[Rust 1.87.0]: https://blog.rust-lang.org/2025/05/15/Rust-1.87.0/
