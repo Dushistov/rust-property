@@ -394,7 +394,7 @@ impl MethodNameConf {
         let method_name = match self {
             MethodNameConf::Name(ref name) => name.to_owned(),
             MethodNameConf::Format { prefix, suffix } => {
-                format!("{}{}{}", prefix, field_name.to_string(), suffix)
+                format!("{prefix}{field_name}{suffix}")
             }
         };
         syn::Ident::new(&method_name, field_name.span())
@@ -415,7 +415,7 @@ impl OrdFieldConf {
                 .get_ident()
                 .ok_or_else(|| SynError::new(p.span(), "this attribute should be a single ident"))?
                 .to_string();
-            if options.iter().any(|opt| *opt == s.as_str()) {
+            if options.contains(&s.as_str()) {
                 if sort_type.is_some() {
                     return Err(SynError::new(
                         p.span(),
@@ -678,7 +678,7 @@ impl FieldConf {
                     attr => {
                         return Err(SynError::new(
                             list.path.span(),
-                            format!("unsupport attribute `{}`", attr),
+                            format!("unsupport attribute `{attr}`"),
                         ));
                     }
                 }
