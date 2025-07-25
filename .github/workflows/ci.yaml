@@ -50,7 +50,7 @@ jobs:
         run: echo "::set-output name=yyyymm::$(/bin/date -u "+%Y%m")"
       - name: Cache (cargo-deny)
         id: cache-cargo-deny
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/cargo-deny
           key: ${{ runner.os }}-${{ steps.cache-key.outputs.yyyymm }}
@@ -93,7 +93,7 @@ jobs:
         run: echo "::set-output name=yyyymm::$(/bin/date -u "+%Y%m")"
       - name: Cache (cargo-expand)
         id: cache-cargo-expand
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/cargo-expand
           key: ${{ runner.os }}-${{ steps.cache-key.outputs.yyyymm }}
