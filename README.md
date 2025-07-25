@@ -304,7 +304,7 @@ Enjoy it!
 
 ## Minimum Supported Rust Version
 
-[Rust 1.31.0].
+[Rust 1.87.0].
 
 ## License
 
