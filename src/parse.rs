@@ -5,7 +5,7 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
-
+#![allow(static_mut_refs)]
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Once,
