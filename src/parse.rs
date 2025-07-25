@@ -5,11 +5,6 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
-#![allow(static_mut_refs)]
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Once,
-};
 
 use quote::quote;
 use syn::{parse::Result as ParseResult, spanned::Spanned, Error as SynError};
@@ -27,19 +22,10 @@ const SET_OPTION_FULL_OPTION: &[&str] = &["full_option"];
 const CLR_TYPE_OPTIONS: (&str, Option<&[&str]>) = ("scope", Some(&["auto", "option", "all"]));
 const SORT_TYPE_OPTIONS: &[&str] = &["asc", "desc"];
 
-static INIT_DEFAULT: Once = Once::new();
-static mut CRATE_CONF: Option<FieldConf> = None;
-static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PropertyType {
-    Crate,
     Container,
     Field,
-}
-
-pub(crate) struct CrateConfDef {
-    pub(crate) conf: FieldConf,
 }
 
 pub(crate) struct ContainerDef {
@@ -141,48 +127,6 @@ pub(crate) struct FieldConf {
     pub(crate) skip: bool,
 }
 
-impl syn::parse::Parse for CrateConfDef {
-    fn parse(input: syn::parse::ParseStream) -> ParseResult<Self> {
-        let attr_args =
-            syn::punctuated::Punctuated::<syn::NestedMeta, syn::Token![,]>::parse_terminated(
-                input,
-            )?;
-        let mut conf = FieldConf::default();
-        for nested_meta in attr_args.iter() {
-            parse_nested_meta(&mut conf, nested_meta, PropertyType::Crate)?;
-        }
-        Ok(Self { conf })
-    }
-}
-
-impl CrateConfDef {
-    pub(crate) fn set_default_conf(self) {
-        let Self { conf } = self;
-        let call_count = CALL_COUNT.load(Ordering::SeqCst);
-        unsafe {
-            if CRATE_CONF.is_some() {
-                panic!(
-                    "The default property for the whole crate should be \
-                     set only once for each crate."
-                );
-            } else if call_count > 0 {
-                panic!(
-                    "Some properties of containers or fields was set \
-                     before the default property for the whole crate has been taken effect."
-                );
-            }
-            INIT_DEFAULT.call_once(|| {
-                CRATE_CONF = Some(conf);
-            });
-        }
-    }
-
-    fn get_default_conf() -> FieldConf {
-        let _ = CALL_COUNT.fetch_add(1, Ordering::SeqCst);
-        unsafe { CRATE_CONF.as_ref().map(ToOwned::to_owned) }.unwrap_or_else(Default::default)
-    }
-}
-
 impl syn::parse::Parse for ContainerDef {
     fn parse(input: syn::parse::ParseStream) -> ParseResult<Self> {
         let derive_input: syn::DeriveInput = input.parse()?;
@@ -198,11 +142,8 @@ impl syn::parse::Parse for ContainerDef {
         match data {
             syn::Data::Struct(data) => match data.fields {
                 syn::Fields::Named(named_fields) => {
-                    let conf = ContainerDef::parse_attrs(
-                        attrs_span,
-                        CrateConfDef::get_default_conf(),
-                        &attrs[..],
-                    )?;
+                    let conf =
+                        ContainerDef::parse_attrs(attrs_span, FieldConf::default(), &attrs[..])?;
                     Ok(Self {
                         name: ident,
                         generics,
