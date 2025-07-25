@@ -43,12 +43,11 @@ function main () {
     mkdir -p "${crate_name}/src"
 
     echo "Generate the lib.rs."
-    sed -n '/^### Original Code$/,/^```$/p' README.md \
-        | tail -n +4 | head -n -1 > "${crate_name}/src/lib.rs"
+    sed -n -e '/### Original Code/,/```$/ { /### Original Code/d; /```/d; p; }' README.md \
+        > "${crate_name}/src/lib.rs"
     echo "Generate the expected file."
-    sed -n '/^### Generated Code$/,/^```$/p' README.md \
-        | tail -n +4 | head -n -1 \
-        > "${crate_name}/expected.tmp"
+    sed -n -e '/### Generated Code/,/```$/ { /### Generated Code/d; /```/d; p; }' README.md \
+        | sed -e '1{/^$/d;}' > "${crate_name}/expected.tmp"
 
     echo "Generate the Cargo.toml."
     cat > "${crate_name}/Cargo.toml" << EOF
@@ -91,7 +90,7 @@ EOF
 
     echo "Do the test."
     set +e
-    diff "${crate_name}/result.tmp" "${crate_name}/expected.tmp"
+    diff -u -w "${crate_name}/result.tmp" "${crate_name}/expected.tmp"
     result=$?
 }
 
