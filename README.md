@@ -12,7 +12,7 @@ Generate several common methods for structs automatically.
 [GitHub Actions]: https://github.com/yangby-cryptape/rust-property/workflows/CI/badge.svg
 [Crate Badge]: https://img.shields.io/crates/v/property.svg
 [Crate Doc]: https://docs.rs/property/badge.svg
-[MSRV 1.31.0]: https://img.shields.io/badge/rust-%3E%3D%201.31.0-blue
+[MSRV 1.87.0]: https://img.shields.io/badge/rust-%3E%3D%201.87.0-blue
 
 ## Usage
 
