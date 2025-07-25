@@ -18,16 +18,7 @@ Generate several common methods for structs automatically.
 
 Apply the derive proc-macro `#[derive(Property)]` to structs, and use `#[property(..)]` to configure it.
 
-There are three levels of properties:
-
-- Set crate properties can change the default settings for all containers (structs) in the whole crate.
-
-  Limited by the procedural macros, here we have to use a tricky way to set the crate properties:
-
-  ```rust
-  #[property_default(get(..), set(..), ..)]
-  struct PropertyCrateConf; // This struct is only used for introducing the attribute macro, and it will be removed in the macro.
-  ```
+There are two levels of properties:
 
 - Set container properties can change the default properties for all fields in the container.
 
@@ -119,10 +110,7 @@ extern crate std as alloc;
 
 use alloc::{string::String, vec::Vec};
 
-use property::{property_default, Property};
-
-#[property_default(get(public), ord(desc), clr(scope = "option"))]
-struct PropertyCrateConf;
+use property::Property;
 
 #[derive(Copy, Clone)]
 pub enum Species {
@@ -133,7 +121,7 @@ pub enum Species {
 }
 
 #[derive(Property)]
-#[property(set(private), mut(disable))]
+#[property(get(public), ord(desc), clr(scope = "option"), set(private), mut(disable))]
 pub struct Pet {
     #[property(get(name = "identification"), set(disable), ord(asc, _2))]
     id: [u8; 32],
