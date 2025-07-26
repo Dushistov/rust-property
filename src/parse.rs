@@ -518,7 +518,7 @@ fn check_path_params<'a>(
     let mut find;
     for p in path_params.iter() {
         find = false;
-        for (i, group) in options.iter().enumerate() {
+        'outer: for (i, group) in options.iter().enumerate() {
             for opt in group.iter() {
                 if p.is_ident(opt) {
                     find = true;
@@ -529,11 +529,8 @@ fn check_path_params<'a>(
                         ));
                     }
                     result[i] = Some(*opt);
-                    break;
+                    break 'outer;
                 }
-            }
-            if find {
-                break;
             }
         }
         if !find {
@@ -552,18 +549,15 @@ fn check_namevalue_params<'a>(
     for (n, v) in params.iter() {
         find = false;
         let value = v.value();
-        for (k, group_opt) in options.iter() {
+        'outer: for (k, group_opt) in options.iter() {
             if n.is_ident(k) {
                 if let Some(group) = group_opt {
                     for opt in group.iter() {
                         if &value == opt {
                             let _ = result.insert(*k, value.clone());
                             find = true;
-                            break;
+                            break 'outer;
                         }
-                    }
-                    if find {
-                        break;
                     }
                 } else {
                     let _ = result.insert(*k, value);
