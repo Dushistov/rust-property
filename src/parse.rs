@@ -119,21 +119,18 @@ impl syn::parse::Parse for ContainerDef {
             ..
         } = derive_input;
         let ident_span = ident.span();
-        match data {
-            syn::Data::Struct(data) => match data.fields {
-                syn::Fields::Named(named_fields) => {
-                    let conf =
-                        ContainerDef::parse_attrs(attrs_span, FieldConf::default(), &attrs[..])?;
-                    Ok(Self {
-                        name: ident,
-                        generics,
-                        fields: FieldDef::parse_named_fields(named_fields, conf, ident_span)?,
-                    })
-                }
-                _ => Err(SynError::new(ident_span, "only support named fields")),
-            },
-            _ => Err(SynError::new(ident_span, "only support structs")),
-        }
+        let syn::Data::Struct(data) = data else {
+            return Err(SynError::new(ident_span, "only support structs"));
+        };
+        let syn::Fields::Named(named_fields) = data.fields else {
+            return Err(SynError::new(ident_span, "only support named fields"));
+        };
+        let conf = ContainerDef::parse_attrs(attrs_span, FieldConf::default(), &attrs[..])?;
+        Ok(Self {
+            name: ident,
+            generics,
+            fields: FieldDef::parse_named_fields(named_fields, conf, ident_span)?,
+        })
     }
 }
 
