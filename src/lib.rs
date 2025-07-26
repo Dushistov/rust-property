@@ -21,7 +21,10 @@ use crate::{
 /// Generate several common methods for structs automatically.
 #[proc_macro_derive(Property, attributes(property))]
 pub fn derive_property(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let property = syn::parse_macro_input!(input as ContainerDef);
+    let property = match ContainerDef::create(syn::parse_macro_input!(input as syn::DeriveInput)) {
+        Ok(x) => x,
+        Err(err) => return err.to_compile_error().into(),
+    };
     let expanded = {
         let name = &property.name;
         let (impl_generics, type_generics, where_clause_opt) = property.generics.split_for_impl();
