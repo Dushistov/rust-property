@@ -32,7 +32,6 @@ If no properties is set, the default properties will be applied:
     set(crate, prefix = "set_", type = "ref"),
     mut(crate, prefix = "mut_"),
     clr(crate, prefix = "clear_", scope = "option")
-    ord(asc)
 )]
 ```
 
