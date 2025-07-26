@@ -30,12 +30,12 @@ If no properties is set, the default properties will be applied:
 #[property(
     get(crate, prefix = "", suffix = "", type="auto"),
     set(crate, prefix = "set_", type = "ref"),
-    mut(crate, prefix = "mut_"),
+    mut_(crate, prefix = "mut_"),
     clr(crate, prefix = "clear_", scope = "option")
 )]
 ```
 
-There are five kinds of configurable properties: `skip`, `get`, `set`, `mut` and `clr`.
+There are five kinds of configurable properties: `skip`, `get`, `set`, `mut_` and `clr`.
 
 - If the `skip` property is set, no methods will be generated.
 
@@ -105,7 +105,7 @@ pub enum Species {
 }
 
 #[derive(Property)]
-#[property(get(public), clr(scope = "option"), set(private), mut(disable))]
+#[property(get(public), clr(scope = "option"), set(private), mut_(disable))]
 pub struct Pet {
     #[property(get(name = "identification"), set(disable))]
     id: [u8; 32],
@@ -120,11 +120,11 @@ pub struct Pet {
     owner: String,
     #[property(clr(scope = "auto"))]
     family_members: Vec<String>,
-    #[property(get(type = "ref"), mut(crate))]
+    #[property(get(type = "ref"), mut_(crate))]
     info: String,
     #[property(get(disable), set(type = "replace"))]
     pub tag: Vec<String>,
-    #[property(mut(public, suffix = "_mut"))]
+    #[property(mut_(public, suffix = "_mut"))]
     note: Option<String>,
     #[property(set(type = "replace", full_option))]
     price: Option<u32>,
