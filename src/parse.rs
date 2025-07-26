@@ -7,7 +7,7 @@
 // except according to those terms.
 
 use quote::quote;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use syn::{parse::Result as ParseResult, spanned::Spanned, Error as SynError};
 
 const ATTR_NAME: &str = "property";
@@ -349,7 +349,7 @@ impl FieldConf {
                 }
             }
             syn::Meta::List(list) => {
-                let mut path_params = ::std::collections::HashSet::new();
+                let mut path_params = HashSet::new();
                 let mut namevalue_params = HashMap::new();
                 for nested_meta in list.nested.iter() {
                     match nested_meta {
@@ -515,7 +515,7 @@ impl FieldConf {
 }
 
 fn check_path_params<'a>(
-    path_params: &::std::collections::HashSet<&syn::Path>,
+    path_params: &HashSet<&syn::Path>,
     options: &[&[&'a str]],
 ) -> ParseResult<Vec<Option<&'a str>>> {
     let mut result = vec![None; options.len()];
