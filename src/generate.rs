@@ -83,7 +83,7 @@ impl ClrMethod {
             FieldType::Boolean | FieldType::Character => ClrMethod::SetDefault,
             FieldType::String_ | FieldType::Vector(_) => ClrMethod::CallClear,
             FieldType::Array(_) => ClrMethod::FillWithDefault,
-            FieldType::Unhandled(Some(ref type_name)) => match type_name.as_str() {
+            FieldType::Unhandled(Some(type_name)) => match type_name.as_str() {
                 "String" | "PathBuf" | "Vec" | "VecDeque" | "LinkedList" | "HashMap"
                 | "BTreeMap" | "HashSet" | "BTreeSet" | "BinaryHeap" => ClrMethod::CallClear,
                 _ => ClrMethod::None_,
