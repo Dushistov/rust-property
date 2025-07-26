@@ -12,15 +12,6 @@ use syn::{parse::Result as ParseResult, spanned::Spanned, Error as SynError};
 
 const ATTR_NAME: &str = "property";
 const SKIP: &str = "skip";
-const NAME_OPTION: (&str, Option<&[&str]>) = ("name", None);
-const PREFIX_OPTION: (&str, Option<&[&str]>) = ("prefix", None);
-const SUFFIX_OPTION: (&str, Option<&[&str]>) = ("suffix", None);
-const VISIBILITY_OPTIONS: &[&str] = &["disable", "public", "crate", "private"];
-const GET_TYPE_OPTIONS: (&str, Option<&[&str]>) = ("type", Some(&["auto", "ref", "copy", "clone"]));
-const SET_TYPE_OPTIONS: (&str, Option<&[&str]>) =
-    ("type", Some(&["ref", "own", "none", "replace"]));
-const SET_OPTION_FULL_OPTION: &[&str] = &["full_option"];
-const CLR_TYPE_OPTIONS: (&str, Option<&[&str]>) = ("scope", Some(&["auto", "option", "all"]));
 
 pub(crate) struct ContainerDef {
     pub name: syn::Ident,
@@ -99,6 +90,80 @@ pub(crate) struct ClrFieldConf {
     pub scope: ClrScopeConf,
 }
 
+trait ParseFieldConf {
+    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()>;
+}
+
+impl ParseFieldConf for GetFieldConf {
+    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
+        if let Some(vis) = VisibilityConf::from_path(name) {
+            self.vis = vis;
+            not_expected_value(name, value)?;
+        } else if let Some(name) = MethodNameConf::from_name_value(name, value)? {
+            self.name = name;
+        } else if name.is_ident("type") {
+            let value = expected_value(name, value)?;
+            self.typ = GetTypeConf::from_value(value)?;
+        } else {
+            return Err(SynError::new(name.span(), "this attribute was unknown"));
+        }
+
+        Ok(())
+    }
+}
+
+impl ParseFieldConf for SetFieldConf {
+    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
+        if let Some(vis) = VisibilityConf::from_path(name) {
+            self.vis = vis;
+            not_expected_value(name, value)?;
+        } else if let Some(name) = MethodNameConf::from_name_value(name, value)? {
+            self.name = name;
+        } else if name.is_ident("type") {
+            let value = expected_value(name, value)?;
+            self.typ = SetTypeConf::from_value(value)?;
+        } else if name.is_ident("full_option") {
+            self.full_option = true;
+            not_expected_value(name, value)?;
+        } else {
+            return Err(SynError::new(name.span(), "this attribute was unknown"));
+        }
+
+        Ok(())
+    }
+}
+
+impl ParseFieldConf for MutFieldConf {
+    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
+        if let Some(vis) = VisibilityConf::from_path(name) {
+            self.vis = vis;
+            not_expected_value(name, value)?;
+        } else if let Some(name) = MethodNameConf::from_name_value(name, value)? {
+            self.name = name;
+        } else {
+            return Err(SynError::new(name.span(), "this attribute was unknown"));
+        }
+        Ok(())
+    }
+}
+
+impl ParseFieldConf for ClrFieldConf {
+    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
+        if let Some(vis) = VisibilityConf::from_path(name) {
+            self.vis = vis;
+            not_expected_value(name, value)?;
+        } else if let Some(name) = MethodNameConf::from_name_value(name, value)? {
+            self.name = name;
+        } else if name.is_ident("scope") {
+            let value = expected_value(name, value)?;
+            self.scope = ClrScopeConf::from_value(value)?;
+        } else {
+            return Err(SynError::new(name.span(), "this attribute was unknown"));
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct FieldConf {
     pub get: GetFieldConf,
@@ -175,69 +240,53 @@ impl FieldDef {
 }
 
 impl GetTypeConf {
-    pub(crate) fn parse_from_input(
-        namevalue_params: &HashMap<&str, String>,
-        span: proc_macro2::Span,
-    ) -> ParseResult<Option<Self>> {
-        let choice = match namevalue_params.get("type").map(AsRef::as_ref) {
-            None => None,
-            Some("auto") => Some(GetTypeConf::Auto),
-            Some("ref") => Some(GetTypeConf::Ref),
-            Some("copy") => Some(GetTypeConf::Copy),
-            Some("clone") => Some(GetTypeConf::Clone),
-            _ => return Err(SynError::new(span, "unreachable result")),
-        };
-        Ok(choice)
+    fn from_value(value: &syn::LitStr) -> ParseResult<Self> {
+        Ok(match value.value().as_str() {
+            "auto" => GetTypeConf::Auto,
+            "ref" => GetTypeConf::Ref,
+            "copy" => GetTypeConf::Copy,
+            "clone" => GetTypeConf::Clone,
+            _ => return Err(SynError::new(value.span(), "Unknown `get` type value")),
+        })
     }
 }
 
 impl SetTypeConf {
-    pub(crate) fn parse_from_input(
-        namevalue_params: &HashMap<&str, String>,
-        span: proc_macro2::Span,
-    ) -> ParseResult<Option<Self>> {
-        let choice = match namevalue_params.get("type").map(AsRef::as_ref) {
-            None => None,
-            Some("ref") => Some(SetTypeConf::Ref),
-            Some("own") => Some(SetTypeConf::Own),
-            Some("none") => Some(SetTypeConf::None),
-            Some("replace") => Some(SetTypeConf::Replace),
-            _ => return Err(SynError::new(span, "unreachable result")),
-        };
-        Ok(choice)
+    fn from_value(value: &syn::LitStr) -> ParseResult<Self> {
+        Ok(match value.value().as_str() {
+            "ref" => SetTypeConf::Ref,
+            "own" => SetTypeConf::Own,
+            "none" => SetTypeConf::None,
+            "replace" => SetTypeConf::Replace,
+            _ => return Err(SynError::new(value.span(), "Unknown `set` type value")),
+        })
     }
 }
 
 impl ClrScopeConf {
-    pub(crate) fn parse_from_input(
-        namevalue_params: &HashMap<&str, String>,
-        span: proc_macro2::Span,
-    ) -> ParseResult<Option<Self>> {
-        let choice = match namevalue_params.get("scope").map(AsRef::as_ref) {
-            None => None,
-            Some("auto") => Some(ClrScopeConf::Auto),
-            Some("option") => Some(ClrScopeConf::Option),
-            Some("all") => Some(ClrScopeConf::All),
-            _ => return Err(SynError::new(span, "unreachable result")),
-        };
-        Ok(choice)
+    fn from_value(value: &syn::LitStr) -> ParseResult<Self> {
+        Ok(match value.value().as_str() {
+            "auto" => Self::Auto,
+            "option" => Self::Option,
+            "all" => Self::All,
+            _ => return Err(SynError::new(value.span(), "Unknown `clr` scope value")),
+        })
     }
 }
 
 impl VisibilityConf {
-    pub(crate) fn parse_from_input(
-        input: Option<&str>,
-        span: proc_macro2::Span,
-    ) -> ParseResult<Option<Self>> {
-        let choice = match input {
-            None => None,
-            Some("disable") => Some(VisibilityConf::Disable),
-            Some("public") => Some(VisibilityConf::Public),
-            Some("crate") => Some(VisibilityConf::Crate),
-            Some("private") => Some(VisibilityConf::Private),
-            _ => return Err(SynError::new(span, "unreachable result")),
-        };
-        Ok(choice)
+    fn from_path(name: &syn::Path) -> Option<Self> {
+        if name.is_ident("disable") {
+            Some(VisibilityConf::Disable)
+        } else if name.is_ident("public") {
+            Some(VisibilityConf::Public)
+        } else if name.is_ident("crate") {
+            Some(VisibilityConf::Crate)
+        } else if name.is_ident("private") {
+            Some(VisibilityConf::Private)
+        } else {
+            None
+        }
     }
 
     pub(crate) fn to_ts(self) -> Option<proc_macro2::TokenStream> {
@@ -251,36 +300,24 @@ impl VisibilityConf {
 }
 
 impl MethodNameConf {
-    pub(crate) fn parse_from_input(
-        namevalue_params: &HashMap<&str, String>,
-        span: proc_macro2::Span,
-    ) -> ParseResult<Option<Self>> {
-        let name_opt = namevalue_params.get("name").map(ToOwned::to_owned);
-        let prefix_opt = namevalue_params.get("prefix").map(ToOwned::to_owned);
-        let suffix_opt = namevalue_params.get("suffix").map(ToOwned::to_owned);
-        if let Some(name) = name_opt {
-            if prefix_opt.is_some() || suffix_opt.is_some() {
-                Err(SynError::new(
-                    span,
-                    "do not set prefix or suffix if name was set",
-                ))
-            } else {
-                Ok(Some(MethodNameConf::Name(name)))
-            }
+    fn from_name_value(name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<Option<Self>> {
+        if name.is_ident("name") {
+            let value = expected_value(name, value)?;
+            Ok(Some(Self::Name(value.value())))
+        } else if name.is_ident("prefix") {
+            let value = expected_value(name, value)?;
+            Ok(Some(Self::Format {
+                prefix: value.value(),
+                suffix: String::new(),
+            }))
+        } else if name.is_ident("suffix") {
+            let value = expected_value(name, value)?;
+            Ok(Some(Self::Format {
+                prefix: String::new(),
+                suffix: value.value(),
+            }))
         } else {
-            let choice = match (prefix_opt, suffix_opt) {
-                (Some(prefix), Some(suffix)) => Some(MethodNameConf::Format { prefix, suffix }),
-                (Some(prefix), None) => Some(MethodNameConf::Format {
-                    prefix,
-                    suffix: "".to_owned(),
-                }),
-                (None, Some(suffix)) => Some(MethodNameConf::Format {
-                    prefix: "".to_owned(),
-                    suffix,
-                }),
-                (None, None) => None,
-            };
-            Ok(choice)
+            Ok(None)
         }
     }
 
@@ -411,90 +448,35 @@ impl FieldConf {
                     .as_ref()
                 {
                     "get" => {
-                        let paths = check_path_params(&path_params, &[VISIBILITY_OPTIONS])?;
-                        let namevalues = check_namevalue_params(
-                            &namevalue_params,
-                            &[NAME_OPTION, PREFIX_OPTION, SUFFIX_OPTION, GET_TYPE_OPTIONS],
-                        )?;
-                        if let Some(choice) =
-                            VisibilityConf::parse_from_input(paths[0], list.path.span())?
-                        {
-                            self.get.vis = choice;
+                        for p in &path_params {
+                            self.get.set_option(p, None)?;
                         }
-                        if let Some(choice) =
-                            MethodNameConf::parse_from_input(&namevalues, list.path.span())?
-                        {
-                            self.get.name = choice;
-                        }
-                        if let Some(choice) =
-                            GetTypeConf::parse_from_input(&namevalues, list.path.span())?
-                        {
-                            self.get.typ = choice;
+                        for (k, v) in &namevalue_params {
+                            self.get.set_option(k, Some(v))?;
                         }
                     }
                     "set" => {
-                        let paths = check_path_params(
-                            &path_params,
-                            &[VISIBILITY_OPTIONS, SET_OPTION_FULL_OPTION],
-                        )?;
-                        let namevalues = check_namevalue_params(
-                            &namevalue_params,
-                            &[NAME_OPTION, PREFIX_OPTION, SUFFIX_OPTION, SET_TYPE_OPTIONS],
-                        )?;
-                        if let Some(choice) =
-                            VisibilityConf::parse_from_input(paths[0], list.path.span())?
-                        {
-                            self.set.vis = choice;
+                        for p in &path_params {
+                            self.set.set_option(p, None)?;
                         }
-                        self.set.full_option = paths[1].is_some();
-                        if let Some(choice) =
-                            MethodNameConf::parse_from_input(&namevalues, list.path.span())?
-                        {
-                            self.set.name = choice;
-                        }
-                        if let Some(choice) =
-                            SetTypeConf::parse_from_input(&namevalues, list.path.span())?
-                        {
-                            self.set.typ = choice;
+                        for (k, v) in &namevalue_params {
+                            self.set.set_option(k, Some(v))?;
                         }
                     }
                     "mut_" => {
-                        let paths = check_path_params(&path_params, &[VISIBILITY_OPTIONS])?;
-                        let namevalues = check_namevalue_params(
-                            &namevalue_params,
-                            &[NAME_OPTION, PREFIX_OPTION, SUFFIX_OPTION],
-                        )?;
-                        if let Some(choice) =
-                            VisibilityConf::parse_from_input(paths[0], list.path.span())?
-                        {
-                            self.mut_.vis = choice;
+                        for p in &path_params {
+                            self.mut_.set_option(p, None)?;
                         }
-                        if let Some(choice) =
-                            MethodNameConf::parse_from_input(&namevalues, list.path.span())?
-                        {
-                            self.mut_.name = choice;
+                        for (k, v) in &namevalue_params {
+                            self.mut_.set_option(k, Some(v))?;
                         }
                     }
                     "clr" => {
-                        let paths = check_path_params(&path_params, &[VISIBILITY_OPTIONS])?;
-                        let namevalues = check_namevalue_params(
-                            &namevalue_params,
-                            &[NAME_OPTION, PREFIX_OPTION, SUFFIX_OPTION, CLR_TYPE_OPTIONS],
-                        )?;
-                        if let Some(choice) =
-                            VisibilityConf::parse_from_input(paths[0], list.path.span())?
-                        {
-                            self.clr.vis = choice;
+                        for p in &path_params {
+                            self.clr.set_option(p, None)?;
                         }
-                        if let Some(choice) =
-                            MethodNameConf::parse_from_input(&namevalues, list.path.span())?
-                        {
-                            self.clr.name = choice;
-                        }
-                        if let Some(choice) =
-                            ClrScopeConf::parse_from_input(&namevalues, list.path.span())?
-                        {
-                            self.clr.scope = choice;
+                        for (k, v) in &namevalue_params {
+                            self.clr.set_option(k, Some(v))?;
                         }
                     }
                     attr => {
@@ -508,69 +490,6 @@ impl FieldConf {
         }
         Ok(())
     }
-}
-
-fn check_path_params<'a>(
-    path_params: &HashSet<&syn::Path>,
-    options: &[&[&'a str]],
-) -> ParseResult<Vec<Option<&'a str>>> {
-    let mut result = vec![None; options.len()];
-    let mut find;
-    for p in path_params.iter() {
-        find = false;
-        'outer: for (i, group) in options.iter().enumerate() {
-            for opt in group.iter() {
-                if p.is_ident(opt) {
-                    find = true;
-                    if result[i].is_some() {
-                        return Err(SynError::new(
-                            p.span(),
-                            "this kind of attribute has been set twice",
-                        ));
-                    }
-                    result[i] = Some(*opt);
-                    break 'outer;
-                }
-            }
-        }
-        if !find {
-            return Err(SynError::new(p.span(), "this attribute was unknown"));
-        }
-    }
-    Ok(result)
-}
-
-fn check_namevalue_params<'a>(
-    params: &HashMap<&syn::Path, &syn::LitStr>,
-    options: &[(&'a str, Option<&[&'a str]>)],
-) -> ParseResult<HashMap<&'a str, String>> {
-    let mut result = HashMap::new();
-    let mut find;
-    for (n, v) in params.iter() {
-        find = false;
-        let value = v.value();
-        'outer: for (k, group_opt) in options.iter() {
-            if n.is_ident(k) {
-                if let Some(group) = group_opt {
-                    for opt in group.iter() {
-                        if &value == opt {
-                            let _ = result.insert(*k, value.clone());
-                            find = true;
-                            break 'outer;
-                        }
-                    }
-                } else {
-                    let _ = result.insert(*k, value);
-                    find = true;
-                    break;
-                }
-            }
-        }
-        if !find {
-            return Err(SynError::new(n.span(), "this attribute was unknown"));
-        }
-    }
-    Ok(result)
 }
 
 fn parse_attrs(
@@ -623,4 +542,27 @@ fn parse_attrs(
         }
     }
     Ok(conf)
+}
+
+fn not_expected_value(name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
+    if value.is_some() {
+        Err(SynError::new(
+            name.span(),
+            "not expected value for this attribute",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn expected_value<'a>(
+    name: &syn::Path,
+    value: Option<&'a syn::LitStr>,
+) -> ParseResult<&'a syn::LitStr> {
+    value.ok_or_else(|| {
+        SynError::new(
+            name.span(),
+            "Expect string literal value for this attribute",
+        )
+    })
 }
