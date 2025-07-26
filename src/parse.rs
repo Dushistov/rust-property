@@ -601,7 +601,13 @@ fn parse_attrs(
                             ));
                         }
                         for nested_meta in list.nested.iter() {
-                            parse_nested_meta(&mut conf, nested_meta)?;
+                            let syn::NestedMeta::Meta(meta) = nested_meta else {
+                                return Err(SynError::new(
+                                    nested_meta.span(),
+                                    "the attribute in nested meta should be a list",
+                                ));
+                            };
+                            conf.apply_attrs(meta)?;
                         }
                     }
                 }
@@ -617,17 +623,4 @@ fn parse_attrs(
         }
     }
     Ok(conf)
-}
-
-fn parse_nested_meta(conf: &mut FieldConf, nested_meta: &syn::NestedMeta) -> ParseResult<()> {
-    match nested_meta {
-        syn::NestedMeta::Meta(meta) => {
-            conf.apply_attrs(meta)?;
-            Ok(())
-        }
-        syn::NestedMeta::Lit(lit) => Err(SynError::new(
-            lit.span(),
-            "the attribute in nested meta should not be a literal",
-        )),
-    }
 }
