@@ -108,9 +108,8 @@ pub(crate) struct FieldConf {
     pub(crate) skip: bool,
 }
 
-impl syn::parse::Parse for ContainerDef {
-    fn parse(input: syn::parse::ParseStream) -> ParseResult<Self> {
-        let derive_input: syn::DeriveInput = input.parse()?;
+impl ContainerDef {
+    pub(crate) fn create(derive_input: syn::DeriveInput) -> ParseResult<Self> {
         let attrs_span = derive_input.span();
         let syn::DeriveInput {
             attrs,
@@ -133,9 +132,6 @@ impl syn::parse::Parse for ContainerDef {
             fields: FieldDef::parse_named_fields(named_fields, conf, ident_span)?,
         })
     }
-}
-
-impl ContainerDef {
     fn parse_attrs(
         span: proc_macro2::Span,
         conf: FieldConf,
