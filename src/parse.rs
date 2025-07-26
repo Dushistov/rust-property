@@ -291,7 +291,7 @@ impl MethodNameConf {
 
     pub(crate) fn complete(&self, field_name: &syn::Ident) -> syn::Ident {
         let method_name = match self {
-            MethodNameConf::Name(ref name) => name.to_owned(),
+            MethodNameConf::Name(name) => name.to_owned(),
             MethodNameConf::Format { prefix, suffix } => {
                 format!("{prefix}{field_name}{suffix}")
             }

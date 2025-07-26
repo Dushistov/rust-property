@@ -2,7 +2,7 @@
 name = "property"
 version = "0.4.0-alpha.0"
 authors = ["Boyu Yang <yangby@cryptape.com>"]
-edition = "2018"
+edition = "2021"
 description = "Generate several common methods for structs automatically."
 homepage = "https://github.com/yangby-cryptape/rust-property"
 repository = "https://github.com/yangby-cryptape/rust-property"
