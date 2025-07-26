@@ -30,8 +30,8 @@ If no properties is set, the default properties will be applied:
 #[property(
     get(crate, prefix = "", suffix = "", type="auto"),
     set(crate, prefix = "set_", type = "ref"),
-    mut_(crate, prefix = "mut_"),
-    clr(crate, prefix = "clear_", scope = "option")
+    mut_(disable, prefix = "mut_"),
+    clr(disable, prefix = "clear_", scope = "option")
 )]
 ```
 
@@ -118,15 +118,15 @@ pub struct Pet {
     died: bool,
     #[property(get(type = "clone"), set(type = "none"))]
     owner: String,
-    #[property(clr(scope = "auto"))]
+    #[property(clr(crate, scope = "auto"))]
     family_members: Vec<String>,
     #[property(get(type = "ref"), mut_(crate))]
     info: String,
     #[property(get(disable), set(type = "replace"))]
     pub tag: Vec<String>,
-    #[property(mut_(public, suffix = "_mut"))]
+    #[property(clr(crate), mut_(public, suffix = "_mut"))]
     note: Option<String>,
-    #[property(set(type = "replace", full_option))]
+    #[property(clr(crate), set(type = "replace", full_option))]
     price: Option<u32>,
     #[property(skip)]
     pub reserved: String,
