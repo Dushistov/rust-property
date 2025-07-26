@@ -364,17 +364,16 @@ impl FieldConf {
                             }
                             syn::Meta::NameValue(mnv) => {
                                 let syn::MetaNameValue { path, lit, .. } = mnv;
-                                if let syn::Lit::Str(content) = lit {
-                                    if namevalue_params.insert(path, content).is_some() {
-                                        return Err(SynError::new(
-                                            path.span(),
-                                            "this attribute has been set twice",
-                                        ));
-                                    }
-                                } else {
+                                let syn::Lit::Str(content) = lit else {
                                     return Err(SynError::new(
                                         lit.span(),
                                         "this literal should be a string literal",
+                                    ));
+                                };
+                                if namevalue_params.insert(path, content).is_some() {
+                                    return Err(SynError::new(
+                                        path.span(),
+                                        "this attribute has been set twice",
                                     ));
                                 }
                             }
