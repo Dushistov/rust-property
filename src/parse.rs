@@ -7,6 +7,7 @@
 // except according to those terms.
 
 use quote::quote;
+use std::collections::HashMap;
 use syn::{parse::Result as ParseResult, spanned::Spanned, Error as SynError};
 
 const ATTR_NAME: &str = "property";
@@ -178,7 +179,7 @@ impl FieldDef {
 
 impl GetTypeConf {
     pub(crate) fn parse_from_input(
-        namevalue_params: &::std::collections::HashMap<&str, String>,
+        namevalue_params: &HashMap<&str, String>,
         span: proc_macro2::Span,
     ) -> ParseResult<Option<Self>> {
         let choice = match namevalue_params.get("type").map(AsRef::as_ref) {
@@ -195,7 +196,7 @@ impl GetTypeConf {
 
 impl SetTypeConf {
     pub(crate) fn parse_from_input(
-        namevalue_params: &::std::collections::HashMap<&str, String>,
+        namevalue_params: &HashMap<&str, String>,
         span: proc_macro2::Span,
     ) -> ParseResult<Option<Self>> {
         let choice = match namevalue_params.get("type").map(AsRef::as_ref) {
@@ -212,7 +213,7 @@ impl SetTypeConf {
 
 impl ClrScopeConf {
     pub(crate) fn parse_from_input(
-        namevalue_params: &::std::collections::HashMap<&str, String>,
+        namevalue_params: &HashMap<&str, String>,
         span: proc_macro2::Span,
     ) -> ParseResult<Option<Self>> {
         let choice = match namevalue_params.get("scope").map(AsRef::as_ref) {
@@ -254,7 +255,7 @@ impl VisibilityConf {
 
 impl MethodNameConf {
     pub(crate) fn parse_from_input(
-        namevalue_params: &::std::collections::HashMap<&str, String>,
+        namevalue_params: &HashMap<&str, String>,
         span: proc_macro2::Span,
     ) -> ParseResult<Option<Self>> {
         let name_opt = namevalue_params.get("name").map(ToOwned::to_owned);
@@ -349,7 +350,7 @@ impl FieldConf {
             }
             syn::Meta::List(list) => {
                 let mut path_params = ::std::collections::HashSet::new();
-                let mut namevalue_params = ::std::collections::HashMap::new();
+                let mut namevalue_params = HashMap::new();
                 for nested_meta in list.nested.iter() {
                     match nested_meta {
                         syn::NestedMeta::Meta(meta) => match meta {
@@ -547,10 +548,10 @@ fn check_path_params<'a>(
 }
 
 fn check_namevalue_params<'a>(
-    params: &::std::collections::HashMap<&syn::Path, &syn::LitStr>,
+    params: &HashMap<&syn::Path, &syn::LitStr>,
     options: &[(&'a str, Option<&[&'a str]>)],
-) -> ParseResult<::std::collections::HashMap<&'a str, String>> {
-    let mut result = ::std::collections::HashMap::new();
+) -> ParseResult<HashMap<&'a str, String>> {
+    let mut result = HashMap::new();
     let mut find;
     for (n, v) in params.iter() {
         find = false;
