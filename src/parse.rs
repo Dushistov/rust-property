@@ -338,6 +338,12 @@ impl ::std::default::Default for FieldConf {
 impl FieldConf {
     fn apply_attrs(&mut self, meta: &syn::Meta) -> ParseResult<()> {
         match meta {
+            syn::Meta::NameValue(name_value) => {
+                return Err(SynError::new(
+                    name_value.span(),
+                    "this attribute should not be a name-value pair",
+                ));
+            }
             syn::Meta::Path(path) => {
                 if path.is_ident(SKIP) {
                     self.skip = true;
@@ -499,12 +505,6 @@ impl FieldConf {
                     }
                 }
             }
-            syn::Meta::NameValue(name_value) => {
-                return Err(SynError::new(
-                    name_value.span(),
-                    "this attribute should not be a name-value pair",
-                ));
-            }
         }
         Ok(())
     }
@@ -584,14 +584,6 @@ fn parse_attrs(
                 .parse_meta()
                 .map_err(|_| SynError::new(span, "failed to parse the attributes"))?;
             match meta {
-                syn::Meta::Path(path) => {
-                    if path.is_ident(ATTR_NAME) {
-                        return Err(SynError::new(
-                            path.span(),
-                            "the attribute should not be a path",
-                        ));
-                    }
-                }
                 syn::Meta::List(list) => {
                     if list.path.is_ident(ATTR_NAME) {
                         if list.nested.is_empty() {
@@ -609,6 +601,14 @@ fn parse_attrs(
                             };
                             conf.apply_attrs(meta)?;
                         }
+                    }
+                }
+                syn::Meta::Path(path) => {
+                    if path.is_ident(ATTR_NAME) {
+                        return Err(SynError::new(
+                            path.span(),
+                            "the attribute should not be a path",
+                        ));
                     }
                 }
                 syn::Meta::NameValue(name_value) => {
