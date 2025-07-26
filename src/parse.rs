@@ -482,12 +482,12 @@ impl FieldConf {
                         if let Some(choice) =
                             VisibilityConf::parse_from_input(paths[0], list.path.span())?
                         {
-                            self.mut_.vis = choice;
+                            self.clr.vis = choice;
                         }
                         if let Some(choice) =
                             MethodNameConf::parse_from_input(&namevalues, list.path.span())?
                         {
-                            self.mut_.name = choice;
+                            self.clr.name = choice;
                         }
                         if let Some(choice) =
                             ClrScopeConf::parse_from_input(&namevalues, list.path.span())?
