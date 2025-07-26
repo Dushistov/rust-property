@@ -153,11 +153,12 @@ impl FieldDef {
     ) -> ParseResult<Vec<Self>> {
         let mut fields = Vec::new();
         for f in named_fields.named.into_iter() {
+            let f_span = f.span();
             let syn::Field {
                 attrs, ident, ty, ..
-            } = f.clone();
-            let conf = FieldDef::parse_attrs(f.span(), conf.clone(), &attrs[..])?;
-            let ident = ident.ok_or_else(|| SynError::new(f.span(), "unreachable"))?;
+            } = f;
+            let conf = FieldDef::parse_attrs(f_span, conf.clone(), &attrs[..])?;
+            let ident = ident.ok_or_else(|| SynError::new(f_span, "unreachable"))?;
             let field = Self { ident, ty, conf };
             fields.push(field);
         }
