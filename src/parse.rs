@@ -456,7 +456,7 @@ impl FieldConf {
                             self.set.typ = choice;
                         }
                     }
-                    "mut" => {
+                    "mut_" => {
                         let paths = check_path_params(&path_params, &[VISIBILITY_OPTIONS])?;
                         let namevalues = check_namevalue_params(
                             &namevalue_params,
