@@ -23,15 +23,15 @@ const SET_OPTION_FULL_OPTION: &[&str] = &["full_option"];
 const CLR_TYPE_OPTIONS: (&str, Option<&[&str]>) = ("scope", Some(&["auto", "option", "all"]));
 
 pub(crate) struct ContainerDef {
-    pub(crate) name: syn::Ident,
-    pub(crate) generics: syn::Generics,
-    pub(crate) fields: Vec<FieldDef>,
+    pub name: syn::Ident,
+    pub generics: syn::Generics,
+    pub fields: Vec<FieldDef>,
 }
 
 pub(crate) struct FieldDef {
-    pub(crate) ident: syn::Ident,
-    pub(crate) ty: syn::Type,
-    pub(crate) conf: FieldConf,
+    pub ident: syn::Ident,
+    pub ty: syn::Type,
+    pub conf: FieldConf,
 }
 
 #[derive(Clone, Copy)]
@@ -73,39 +73,39 @@ pub(crate) enum MethodNameConf {
 
 #[derive(Clone)]
 pub(crate) struct GetFieldConf {
-    pub(crate) vis: VisibilityConf,
-    pub(crate) name: MethodNameConf,
-    pub(crate) typ: GetTypeConf,
+    pub vis: VisibilityConf,
+    pub name: MethodNameConf,
+    pub typ: GetTypeConf,
 }
 
 #[derive(Clone)]
 pub(crate) struct SetFieldConf {
-    pub(crate) vis: VisibilityConf,
-    pub(crate) name: MethodNameConf,
-    pub(crate) typ: SetTypeConf,
-    pub(crate) full_option: bool,
+    pub vis: VisibilityConf,
+    pub name: MethodNameConf,
+    pub typ: SetTypeConf,
+    pub full_option: bool,
 }
 
 #[derive(Clone)]
 pub(crate) struct MutFieldConf {
-    pub(crate) vis: VisibilityConf,
-    pub(crate) name: MethodNameConf,
+    pub vis: VisibilityConf,
+    pub name: MethodNameConf,
 }
 
 #[derive(Clone)]
 pub(crate) struct ClrFieldConf {
-    pub(crate) vis: VisibilityConf,
-    pub(crate) name: MethodNameConf,
-    pub(crate) scope: ClrScopeConf,
+    pub vis: VisibilityConf,
+    pub name: MethodNameConf,
+    pub scope: ClrScopeConf,
 }
 
 #[derive(Clone)]
 pub(crate) struct FieldConf {
-    pub(crate) get: GetFieldConf,
-    pub(crate) set: SetFieldConf,
-    pub(crate) mut_: MutFieldConf,
-    pub(crate) clr: ClrFieldConf,
-    pub(crate) skip: bool,
+    pub get: GetFieldConf,
+    pub set: SetFieldConf,
+    pub mut_: MutFieldConf,
+    pub clr: ClrFieldConf,
+    pub skip: bool,
 }
 
 impl ContainerDef {
