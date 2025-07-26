@@ -13,11 +13,11 @@ use crate::{ClrScopeConf, FieldDef, GetTypeConf, SetTypeConf};
 
 pub(crate) enum GetType {
     Ref,
-    Copy_,
-    Clone_,
-    String_,
+    Copy,
+    Clone,
+    String,
     Slice(syn::TypeSlice),
-    Option_(Punctuated<GenericArgument, Comma>),
+    Option(Punctuated<GenericArgument, Comma>),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -27,25 +27,25 @@ pub(crate) enum ClrMethod {
     SetDefault,
     CallClear,
     FillWithDefault,
-    None_,
+    None,
 }
 
 pub(crate) enum FieldType {
     Number,
     Boolean,
     Character,
-    String_,
+    String,
     Array(syn::TypeArray),
     Vector(syn::Type),
-    Option_(Punctuated<GenericArgument, Comma>),
+    Option(Punctuated<GenericArgument, Comma>),
     Unhandled(Option<String>),
 }
 
 impl GetType {
     pub(crate) fn from_field_type(ty: &FieldType) -> Self {
         match ty {
-            FieldType::Number | FieldType::Boolean | FieldType::Character => GetType::Copy_,
-            FieldType::String_ => GetType::String_,
+            FieldType::Number | FieldType::Boolean | FieldType::Character => GetType::Copy,
+            FieldType::String => GetType::String,
             FieldType::Array(type_array) => {
                 let syn::TypeArray {
                     bracket_token,
@@ -61,17 +61,17 @@ impl GetType {
                 bracket_token: syn::token::Bracket::default(),
                 elem: Box::new(inner_type.clone()),
             }),
-            FieldType::Option_(inner_type) => {
+            FieldType::Option(inner_type) => {
                 if inner_type.len() == 1 {
                     if let Some(syn::GenericArgument::Type(inner_type)) = inner_type.first() {
-                        if let GetType::Copy_ =
+                        if let GetType::Copy =
                             GetType::from_field_type(&FieldType::from_type(inner_type))
                         {
-                            return GetType::Copy_;
+                            return GetType::Copy;
                         }
                     }
                 }
-                GetType::Option_(inner_type.clone())
+                GetType::Option(inner_type.clone())
             }
             FieldType::Unhandled(_) => GetType::Ref,
         }
@@ -82,16 +82,16 @@ impl ClrMethod {
     pub(crate) fn from_field_type(ty: &FieldType) -> Self {
         match ty {
             FieldType::Number => ClrMethod::SetZero,
-            FieldType::Option_(_) => ClrMethod::SetNone,
+            FieldType::Option(_) => ClrMethod::SetNone,
             FieldType::Boolean | FieldType::Character => ClrMethod::SetDefault,
-            FieldType::String_ | FieldType::Vector(_) => ClrMethod::CallClear,
+            FieldType::String | FieldType::Vector(_) => ClrMethod::CallClear,
             FieldType::Array(_) => ClrMethod::FillWithDefault,
             FieldType::Unhandled(Some(type_name)) => match type_name.as_str() {
                 "String" | "PathBuf" | "Vec" | "VecDeque" | "LinkedList" | "HashMap"
                 | "BTreeMap" | "HashSet" | "BTreeSet" | "BinaryHeap" => ClrMethod::CallClear,
-                _ => ClrMethod::None_,
+                _ => ClrMethod::None,
             },
-            _ => ClrMethod::None_,
+            _ => ClrMethod::None,
         }
     }
 }
@@ -108,7 +108,7 @@ impl FieldType {
                         "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => FieldType::Number,
                         "bool" => FieldType::Boolean,
                         "char" => FieldType::Character,
-                        "String" => FieldType::String_,
+                        "String" => FieldType::String,
                         "Vec" => {
                             if let syn::PathArguments::AngleBracketed(inner) =
                                 &type_path.path.segments[0].arguments
@@ -126,7 +126,7 @@ impl FieldType {
                             if let syn::PathArguments::AngleBracketed(inner) =
                                 &type_path.path.segments[0].arguments
                             {
-                                FieldType::Option_(inner.args.clone())
+                                FieldType::Option(inner.args.clone())
                             } else {
                                 unreachable!()
                             }
@@ -157,8 +157,8 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
         let get_type = match field_conf.get.typ {
             GetTypeConf::Auto => GetType::from_field_type(&prop_field_type),
             GetTypeConf::Ref => GetType::Ref,
-            GetTypeConf::Copy_ => GetType::Copy_,
-            GetTypeConf::Clone_ => GetType::Clone_,
+            GetTypeConf::Copy => GetType::Copy,
+            GetTypeConf::Clone => GetType::Clone,
         };
         match get_type {
             GetType::Ref => quote!(
@@ -166,17 +166,17 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
                     &self.#field_name
                 }
             ),
-            GetType::Copy_ => quote!(
+            GetType::Copy => quote!(
                 #visibility fn #method_name(&self) -> #field_type {
                     self.#field_name
                 }
             ),
-            GetType::Clone_ => quote!(
+            GetType::Clone => quote!(
                 #visibility fn #method_name(&self) -> #field_type {
                     self.#field_name.clone()
                 }
             ),
-            GetType::String_ => quote!(
+            GetType::String => quote!(
                 #visibility fn #method_name(&self) -> &str {
                     &self.#field_name[..]
                 }
@@ -186,7 +186,7 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
                     &self.#field_name[..]
                 }
             ),
-            GetType::Option_(field_type) => quote!(
+            GetType::Option(field_type) => quote!(
                 #visibility fn #method_name(&self) -> Option<&#field_type> {
                     self.#field_name.as_ref()
                 }
@@ -217,7 +217,7 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
                         self
                     }
                 ),
-                SetTypeConf::None_ => quote!(
+                SetTypeConf::None => quote!(
                     #visibility fn #method_name<T: Into<#inner_type>>(
                        &mut self,
                        val: impl IntoIterator<Item = T>
@@ -234,7 +234,7 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
                     }
                 ),
             },
-            FieldType::Option_(inner_type) if !field_conf.set.full_option => match field_conf.set.typ {
+            FieldType::Option(inner_type) if !field_conf.set.full_option => match field_conf.set.typ {
                 SetTypeConf::Ref => quote!(
                     #visibility fn #method_name<T: Into<#inner_type>>(
                         &mut self, val: T
@@ -251,7 +251,7 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
                         self
                     }
                 ),
-                SetTypeConf::None_ => quote!(
+                SetTypeConf::None => quote!(
                     #visibility fn #method_name<T: Into<#inner_type>>(
                         &mut self, val: T
                     ) {
@@ -283,7 +283,7 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
                         self
                     }
                 ),
-                SetTypeConf::None_ => quote!(
+                SetTypeConf::None => quote!(
                     #visibility fn #method_name<T: Into<#field_type>>(
                         &mut self, val: T
                     ) {
@@ -317,15 +317,15 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
         let auto_clr_method = ClrMethod::from_field_type(&prop_field_type);
         let clr_method = match field_conf.clr.scope {
             ClrScopeConf::Auto => auto_clr_method,
-            ClrScopeConf::Option_ => {
+            ClrScopeConf::Option => {
                 if auto_clr_method == ClrMethod::SetNone {
                     auto_clr_method
                 } else {
-                    ClrMethod::None_
+                    ClrMethod::None
                 }
             }
             ClrScopeConf::All => {
-                if auto_clr_method == ClrMethod::None_ {
+                if auto_clr_method == ClrMethod::None {
                     ClrMethod::SetDefault
                 } else {
                     auto_clr_method
@@ -358,7 +358,7 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
                     self.#field_name.fill_with(Default::default);
                 }
             )),
-            ClrMethod::None_ => None,
+            ClrMethod::None => None,
         }
     }) {
         property.push(ts);

@@ -38,22 +38,22 @@ pub(crate) struct FieldDef {
 pub(crate) enum GetTypeConf {
     Auto,
     Ref,
-    Copy_,
-    Clone_,
+    Copy,
+    Clone,
 }
 
 #[derive(Clone, Copy)]
 pub(crate) enum SetTypeConf {
     Ref,
     Own,
-    None_,
+    None,
     Replace,
 }
 
 #[derive(Clone, Copy)]
 pub(crate) enum ClrScopeConf {
     Auto,
-    Option_,
+    Option,
     All,
 }
 
@@ -187,8 +187,8 @@ impl GetTypeConf {
             None => None,
             Some("auto") => Some(GetTypeConf::Auto),
             Some("ref") => Some(GetTypeConf::Ref),
-            Some("copy") => Some(GetTypeConf::Copy_),
-            Some("clone") => Some(GetTypeConf::Clone_),
+            Some("copy") => Some(GetTypeConf::Copy),
+            Some("clone") => Some(GetTypeConf::Clone),
             _ => return Err(SynError::new(span, "unreachable result")),
         };
         Ok(choice)
@@ -204,7 +204,7 @@ impl SetTypeConf {
             None => None,
             Some("ref") => Some(SetTypeConf::Ref),
             Some("own") => Some(SetTypeConf::Own),
-            Some("none") => Some(SetTypeConf::None_),
+            Some("none") => Some(SetTypeConf::None),
             Some("replace") => Some(SetTypeConf::Replace),
             _ => return Err(SynError::new(span, "unreachable result")),
         };
@@ -220,7 +220,7 @@ impl ClrScopeConf {
         let choice = match namevalue_params.get("scope").map(AsRef::as_ref) {
             None => None,
             Some("auto") => Some(ClrScopeConf::Auto),
-            Some("option") => Some(ClrScopeConf::Option_),
+            Some("option") => Some(ClrScopeConf::Option),
             Some("all") => Some(ClrScopeConf::All),
             _ => return Err(SynError::new(span, "unreachable result")),
         };
@@ -332,7 +332,7 @@ impl ::std::default::Default for FieldConf {
                     prefix: "clear_".to_owned(),
                     suffix: "".to_owned(),
                 },
-                scope: ClrScopeConf::Option_,
+                scope: ClrScopeConf::Option,
             },
             skip: false,
         }
