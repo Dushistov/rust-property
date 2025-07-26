@@ -320,14 +320,14 @@ impl ::std::default::Default for FieldConf {
                 full_option: false,
             },
             mut_: MutFieldConf {
-                vis: VisibilityConf::Crate,
+                vis: VisibilityConf::Disable,
                 name: MethodNameConf::Format {
                     prefix: "mut_".to_owned(),
                     suffix: "".to_owned(),
                 },
             },
             clr: ClrFieldConf {
-                vis: VisibilityConf::Crate,
+                vis: VisibilityConf::Disable,
                 name: MethodNameConf::Format {
                     prefix: "clear_".to_owned(),
                     suffix: "".to_owned(),
