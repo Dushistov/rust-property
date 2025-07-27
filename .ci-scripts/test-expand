@@ -79,13 +79,6 @@ EOF
     cat result-full.tmp \
         | sed -n '/^impl Pet {$/,/^}$/p' \
         > result.tmp
-    cat result-full.tmp \
-        | sed -n '/^impl PartialEq for Pet {$/,/^}$/p' \
-        >> result.tmp
-    cat result-full.tmp \
-        | sed -n '/^impl PartialOrd for Pet {$/,/^}$/p' \
-        >> result.tmp
-
     cd ..
 
     echo "Do the test."
