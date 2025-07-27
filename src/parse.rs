@@ -6,9 +6,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use quote::quote;
-use std::collections::{HashMap, HashSet};
-use syn::{parse::Result as ParseResult, spanned::Spanned, Error as SynError};
+use quote::{quote, ToTokens};
+use syn::{
+    meta::ParseNestedMeta, parse::Result as ParseResult, punctuated::Punctuated, spanned::Spanned,
+    Error as SynError, LitStr, Meta, Token,
+};
 
 const ATTR_NAME: &str = "property";
 const SKIP: &str = "skip";
@@ -91,21 +93,23 @@ pub(crate) struct ClrFieldConf {
 }
 
 trait ParseFieldConf {
-    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()>;
+    fn set_option(&mut self, nested_meta: ParseNestedMeta) -> ParseResult<()>;
 }
 
 impl ParseFieldConf for GetFieldConf {
-    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
-        if let Some(vis) = VisibilityConf::from_path(name) {
+    fn set_option(&mut self, nested_meta: ParseNestedMeta) -> ParseResult<()> {
+        if let Some(vis) = VisibilityConf::from_meta(&nested_meta) {
             self.vis = vis;
-            not_expected_value(name, value)?;
-        } else if let Some(name) = MethodNameConf::from_name_value(name, value)? {
+        } else if let Some(name) = MethodNameConf::from_meta(&nested_meta)? {
             self.name = name;
-        } else if name.is_ident("type") {
-            let value = expected_value(name, value)?;
-            self.typ = GetTypeConf::from_value(value)?;
+        } else if nested_meta.path.is_ident("type") {
+            let value = expected_value(&nested_meta)?;
+            self.typ = GetTypeConf::from_value(&value)?;
         } else {
-            return Err(SynError::new(name.span(), "this attribute was unknown"));
+            return Err(SynError::new(
+                nested_meta.path.span(),
+                "this attribute was unknown",
+            ));
         }
 
         Ok(())
@@ -113,20 +117,21 @@ impl ParseFieldConf for GetFieldConf {
 }
 
 impl ParseFieldConf for SetFieldConf {
-    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
-        if let Some(vis) = VisibilityConf::from_path(name) {
+    fn set_option(&mut self, nested_meta: ParseNestedMeta) -> ParseResult<()> {
+        if let Some(vis) = VisibilityConf::from_meta(&nested_meta) {
             self.vis = vis;
-            not_expected_value(name, value)?;
-        } else if let Some(name) = MethodNameConf::from_name_value(name, value)? {
+        } else if let Some(name) = MethodNameConf::from_meta(&nested_meta)? {
             self.name = name;
-        } else if name.is_ident("type") {
-            let value = expected_value(name, value)?;
-            self.typ = SetTypeConf::from_value(value)?;
-        } else if name.is_ident("full_option") {
+        } else if nested_meta.path.is_ident("type") {
+            let value = expected_value(&nested_meta)?;
+            self.typ = SetTypeConf::from_value(&value)?;
+        } else if nested_meta.path.is_ident("full_option") {
             self.full_option = true;
-            not_expected_value(name, value)?;
         } else {
-            return Err(SynError::new(name.span(), "this attribute was unknown"));
+            return Err(SynError::new(
+                nested_meta.path.span(),
+                "this attribute was unknown",
+            ));
         }
 
         Ok(())
@@ -134,31 +139,35 @@ impl ParseFieldConf for SetFieldConf {
 }
 
 impl ParseFieldConf for MutFieldConf {
-    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
-        if let Some(vis) = VisibilityConf::from_path(name) {
+    fn set_option(&mut self, nested_meta: ParseNestedMeta) -> ParseResult<()> {
+        if let Some(vis) = VisibilityConf::from_meta(&nested_meta) {
             self.vis = vis;
-            not_expected_value(name, value)?;
-        } else if let Some(name) = MethodNameConf::from_name_value(name, value)? {
+        } else if let Some(name) = MethodNameConf::from_meta(&nested_meta)? {
             self.name = name;
         } else {
-            return Err(SynError::new(name.span(), "this attribute was unknown"));
+            return Err(SynError::new(
+                nested_meta.path.span(),
+                "this attribute was unknown",
+            ));
         }
         Ok(())
     }
 }
 
 impl ParseFieldConf for ClrFieldConf {
-    fn set_option(&mut self, name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
-        if let Some(vis) = VisibilityConf::from_path(name) {
+    fn set_option(&mut self, nested_meta: ParseNestedMeta) -> ParseResult<()> {
+        if let Some(vis) = VisibilityConf::from_meta(&nested_meta) {
             self.vis = vis;
-            not_expected_value(name, value)?;
-        } else if let Some(name) = MethodNameConf::from_name_value(name, value)? {
+        } else if let Some(name) = MethodNameConf::from_meta(&nested_meta)? {
             self.name = name;
-        } else if name.is_ident("scope") {
-            let value = expected_value(name, value)?;
-            self.scope = ClrScopeConf::from_value(value)?;
+        } else if nested_meta.path.is_ident("scope") {
+            let value = expected_value(&nested_meta)?;
+            self.scope = ClrScopeConf::from_value(&value)?;
         } else {
-            return Err(SynError::new(name.span(), "this attribute was unknown"));
+            return Err(SynError::new(
+                nested_meta.path.span(),
+                "this attribute was unknown",
+            ));
         }
         Ok(())
     }
@@ -175,7 +184,6 @@ pub(crate) struct FieldConf {
 
 impl ContainerDef {
     pub(crate) fn create(derive_input: syn::DeriveInput) -> ParseResult<Self> {
-        let attrs_span = derive_input.span();
         let syn::DeriveInput {
             attrs,
             ident,
@@ -190,19 +198,15 @@ impl ContainerDef {
         let syn::Fields::Named(named_fields) = data.fields else {
             return Err(SynError::new(ident_span, "only support named fields"));
         };
-        let conf = ContainerDef::parse_attrs(attrs_span, FieldConf::default(), &attrs[..])?;
+        let conf = ContainerDef::parse_attrs(FieldConf::default(), &attrs[..])?;
         Ok(Self {
             name: ident,
             generics,
             fields: FieldDef::parse_named_fields(named_fields, conf, ident_span)?,
         })
     }
-    fn parse_attrs(
-        span: proc_macro2::Span,
-        conf: FieldConf,
-        attrs: &[syn::Attribute],
-    ) -> ParseResult<FieldConf> {
-        parse_attrs(span, conf, attrs)
+    fn parse_attrs(conf: FieldConf, attrs: &[syn::Attribute]) -> ParseResult<FieldConf> {
+        parse_attrs(conf, attrs)
     }
 }
 
@@ -218,7 +222,7 @@ impl FieldDef {
             let syn::Field {
                 attrs, ident, ty, ..
             } = f;
-            let conf = FieldDef::parse_attrs(f_span, conf.clone(), &attrs[..])?;
+            let conf = FieldDef::parse_attrs(conf.clone(), &attrs[..])?;
             let ident = ident.ok_or_else(|| SynError::new(f_span, "unreachable"))?;
             let field = Self { ident, ty, conf };
             fields.push(field);
@@ -230,17 +234,13 @@ impl FieldDef {
         }
     }
 
-    fn parse_attrs(
-        span: proc_macro2::Span,
-        conf: FieldConf,
-        attrs: &[syn::Attribute],
-    ) -> ParseResult<FieldConf> {
-        parse_attrs(span, conf, attrs)
+    fn parse_attrs(conf: FieldConf, attrs: &[syn::Attribute]) -> ParseResult<FieldConf> {
+        parse_attrs(conf, attrs)
     }
 }
 
 impl GetTypeConf {
-    fn from_value(value: &syn::LitStr) -> ParseResult<Self> {
+    fn from_value(value: &LitStr) -> ParseResult<Self> {
         Ok(match value.value().as_str() {
             "auto" => GetTypeConf::Auto,
             "ref" => GetTypeConf::Ref,
@@ -252,7 +252,7 @@ impl GetTypeConf {
 }
 
 impl SetTypeConf {
-    fn from_value(value: &syn::LitStr) -> ParseResult<Self> {
+    fn from_value(value: &LitStr) -> ParseResult<Self> {
         Ok(match value.value().as_str() {
             "ref" => SetTypeConf::Ref,
             "own" => SetTypeConf::Own,
@@ -264,7 +264,7 @@ impl SetTypeConf {
 }
 
 impl ClrScopeConf {
-    fn from_value(value: &syn::LitStr) -> ParseResult<Self> {
+    fn from_value(value: &LitStr) -> ParseResult<Self> {
         Ok(match value.value().as_str() {
             "auto" => Self::Auto,
             "option" => Self::Option,
@@ -275,14 +275,14 @@ impl ClrScopeConf {
 }
 
 impl VisibilityConf {
-    fn from_path(name: &syn::Path) -> Option<Self> {
-        if name.is_ident("disable") {
+    fn from_meta(meta: &ParseNestedMeta) -> Option<Self> {
+        if meta.path.is_ident("disable") {
             Some(VisibilityConf::Disable)
-        } else if name.is_ident("public") {
+        } else if meta.path.is_ident("public") {
             Some(VisibilityConf::Public)
-        } else if name.is_ident("crate") {
+        } else if meta.path.is_ident("crate") {
             Some(VisibilityConf::Crate)
-        } else if name.is_ident("private") {
+        } else if meta.path.is_ident("private") {
             Some(VisibilityConf::Private)
         } else {
             None
@@ -300,18 +300,18 @@ impl VisibilityConf {
 }
 
 impl MethodNameConf {
-    fn from_name_value(name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<Option<Self>> {
-        if name.is_ident("name") {
-            let value = expected_value(name, value)?;
+    fn from_meta(meta: &ParseNestedMeta) -> ParseResult<Option<Self>> {
+        if meta.path.is_ident("name") {
+            let value = expected_value(meta)?;
             Ok(Some(Self::Name(value.value())))
-        } else if name.is_ident("prefix") {
-            let value = expected_value(name, value)?;
+        } else if meta.path.is_ident("prefix") {
+            let value = expected_value(meta)?;
             Ok(Some(Self::Format {
                 prefix: value.value(),
                 suffix: String::new(),
             }))
-        } else if name.is_ident("suffix") {
-            let value = expected_value(name, value)?;
+        } else if meta.path.is_ident("suffix") {
+            let value = expected_value(meta)?;
             Ok(Some(Self::Format {
                 prefix: String::new(),
                 suffix: value.value(),
@@ -372,171 +372,37 @@ impl ::std::default::Default for FieldConf {
     }
 }
 
-impl FieldConf {
-    fn apply_attrs(&mut self, meta: &syn::Meta) -> ParseResult<()> {
-        match meta {
-            syn::Meta::NameValue(name_value) => {
-                return Err(SynError::new(
-                    name_value.span(),
-                    "this attribute should not be a name-value pair",
-                ));
-            }
-            syn::Meta::Path(path) => {
-                if path.is_ident(SKIP) {
-                    self.skip = true;
-                } else {
-                    return Err(SynError::new(path.span(), "this attribute was unknown"));
-                }
-            }
-            syn::Meta::List(list) => {
-                let mut path_params = HashSet::new();
-                let mut namevalue_params = HashMap::new();
-                for nested_meta in list.nested.iter() {
-                    match nested_meta {
-                        syn::NestedMeta::Meta(meta) => match meta {
-                            syn::Meta::Path(path) => {
-                                if !path_params.insert(path) {
-                                    return Err(SynError::new(
-                                        path.span(),
-                                        "this attribute has been set twice",
-                                    ));
-                                }
-                            }
-                            syn::Meta::NameValue(mnv) => {
-                                let syn::MetaNameValue { path, lit, .. } = mnv;
-                                let syn::Lit::Str(content) = lit else {
-                                    return Err(SynError::new(
-                                        lit.span(),
-                                        "this literal should be a string literal",
-                                    ));
-                                };
-                                if namevalue_params.insert(path, content).is_some() {
-                                    return Err(SynError::new(
-                                        path.span(),
-                                        "this attribute has been set twice",
-                                    ));
-                                }
-                            }
-                            _ => {
-                                return Err(SynError::new(
-                                    meta.span(),
-                                    "this attribute should be a path or a name-value pair",
-                                ));
-                            }
-                        },
-                        syn::NestedMeta::Lit(lit) => {
-                            return Err(SynError::new(
-                                lit.span(),
-                                "this attribute should not be a literal",
-                            ));
-                        }
-                    }
-                }
-                if path_params.is_empty() && namevalue_params.is_empty() {
-                    return Err(SynError::new(
-                        list.span(),
-                        "this attribute should not be empty",
-                    ));
-                }
-                match list
-                    .path
-                    .get_ident()
-                    .ok_or_else(|| {
-                        SynError::new(list.path.span(), "this attribute should be a single ident")
-                    })?
-                    .to_string()
-                    .as_ref()
-                {
-                    "get" => {
-                        for p in &path_params {
-                            self.get.set_option(p, None)?;
-                        }
-                        for (k, v) in &namevalue_params {
-                            self.get.set_option(k, Some(v))?;
-                        }
-                    }
-                    "set" => {
-                        for p in &path_params {
-                            self.set.set_option(p, None)?;
-                        }
-                        for (k, v) in &namevalue_params {
-                            self.set.set_option(k, Some(v))?;
-                        }
-                    }
-                    "mut_" => {
-                        for p in &path_params {
-                            self.mut_.set_option(p, None)?;
-                        }
-                        for (k, v) in &namevalue_params {
-                            self.mut_.set_option(k, Some(v))?;
-                        }
-                    }
-                    "clr" => {
-                        for p in &path_params {
-                            self.clr.set_option(p, None)?;
-                        }
-                        for (k, v) in &namevalue_params {
-                            self.clr.set_option(k, Some(v))?;
-                        }
-                    }
-                    attr => {
-                        return Err(SynError::new(
-                            list.path.span(),
-                            format!("unsupport attribute `{attr}`"),
-                        ));
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
-fn parse_attrs(
-    span: proc_macro2::Span,
-    mut conf: FieldConf,
-    attrs: &[syn::Attribute],
-) -> ParseResult<FieldConf> {
+fn parse_attrs(mut conf: FieldConf, attrs: &[syn::Attribute]) -> ParseResult<FieldConf> {
     for attr in attrs.iter() {
-        if let syn::AttrStyle::Outer = attr.style {
-            let meta = attr
-                .parse_meta()
-                .map_err(|_| SynError::new(span, "failed to parse the attributes"))?;
-            match meta {
-                syn::Meta::List(list) => {
-                    if list.path.is_ident(ATTR_NAME) {
-                        if list.nested.is_empty() {
-                            return Err(SynError::new(
-                                list.span(),
-                                "this attribute should not be empty",
-                            ));
-                        }
-                        for nested_meta in list.nested.iter() {
-                            let syn::NestedMeta::Meta(meta) = nested_meta else {
-                                return Err(SynError::new(
-                                    nested_meta.span(),
-                                    "the attribute in nested meta should be a list",
-                                ));
-                            };
-                            conf.apply_attrs(meta)?;
-                        }
+        if matches!(attr.style, syn::AttrStyle::Outer) && attr.meta.path().is_ident(ATTR_NAME) {
+            let nested = attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)?;
+            for meta in nested {
+                let list = match meta {
+                    Meta::Path(path) if path.is_ident(SKIP) => {
+                        conf.skip = true;
+                        continue;
                     }
-                }
-                syn::Meta::Path(path) => {
-                    if path.is_ident(ATTR_NAME) {
+                    Meta::List(list) => list,
+                    _ => {
                         return Err(SynError::new(
-                            path.span(),
-                            "the attribute should not be a path",
-                        ));
+                            meta.span(),
+                            "the attribute should not be a list",
+                        ))
                     }
-                }
-                syn::Meta::NameValue(name_value) => {
-                    if name_value.path.is_ident(ATTR_NAME) {
-                        return Err(SynError::new(
-                            name_value.span(),
-                            "the attribute should not be a name-value pair",
-                        ));
-                    }
+                };
+                if list.path.is_ident("get") {
+                    list.parse_nested_meta(|meta| conf.get.set_option(meta))?;
+                } else if list.path.is_ident("set") {
+                    list.parse_nested_meta(|meta| conf.set.set_option(meta))?;
+                } else if list.path.is_ident("mut_") {
+                    list.parse_nested_meta(|meta| conf.mut_.set_option(meta))?;
+                } else if list.path.is_ident("clr") {
+                    list.parse_nested_meta(|meta| conf.clr.set_option(meta))?;
+                } else {
+                    return Err(SynError::new(
+                        list.path.span(),
+                        format!("unsupport attribute `{}`", list.path.into_token_stream()),
+                    ));
                 }
             }
         }
@@ -544,25 +410,8 @@ fn parse_attrs(
     Ok(conf)
 }
 
-fn not_expected_value(name: &syn::Path, value: Option<&syn::LitStr>) -> ParseResult<()> {
-    if value.is_some() {
-        Err(SynError::new(
-            name.span(),
-            "not expected value for this attribute",
-        ))
-    } else {
-        Ok(())
-    }
-}
-
-fn expected_value<'a>(
-    name: &syn::Path,
-    value: Option<&'a syn::LitStr>,
-) -> ParseResult<&'a syn::LitStr> {
-    value.ok_or_else(|| {
-        SynError::new(
-            name.span(),
-            "Expect string literal value for this attribute",
-        )
-    })
+fn expected_value(meta: &ParseNestedMeta) -> ParseResult<LitStr> {
+    let value = meta.value()?;
+    let value: LitStr = value.parse()?;
+    Ok(value)
 }
