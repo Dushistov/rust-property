@@ -170,18 +170,22 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
             GetTypeConf::Copy => GetType::Copy,
             GetTypeConf::Clone => GetType::Clone,
         };
+        let str_type: syn::Type = syn::parse_quote! { str };
         let mut field_type = field_type;
         if let FieldType::Box(ref boxed_ty) = prop_field_type {
             if boxed_ty.len() == 1 && matches!(field_conf.get.typ, GetTypeConf::Auto) {
                 if let Some(syn::GenericArgument::Type(inner_type)) = boxed_ty.first() {
-                    if *inner_type == syn::parse_quote! { str } {
+                    if *inner_type == str_type {
                         field_type = inner_type;
                     }
                 }
             }
         }
+        if let GetType::String = get_type {
+            field_type = &str_type;
+        }
         match get_type {
-            GetType::Ref => quote!(
+            GetType::Ref | GetType::String => quote!(
                 #visibility fn #method_name(&self) -> &#field_type {
                     &self.#field_name
                 }
@@ -194,11 +198,6 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
             GetType::Clone => quote!(
                 #visibility fn #method_name(&self) -> #field_type {
                     self.#field_name.clone()
-                }
-            ),
-            GetType::String => quote!(
-                #visibility fn #method_name(&self) -> &str {
-                    &self.#field_name[..]
                 }
             ),
             GetType::Slice(field_type) => quote!(
