@@ -144,7 +144,7 @@ impl Pet {
     }
     #[inline]
     pub fn name(&self) -> &str {
-        &self.name[..]
+        &self.name
     }
     #[inline]
     fn set_name<T: Into<String>>(&mut self, val: T) -> &mut Self {
