@@ -229,8 +229,8 @@ impl Pet {
         ::core::mem::replace(&mut self.tag, val.into_iter().map(Into::into).collect())
     }
     #[inline]
-    pub fn note(&self) -> Option<&String> {
-        self.note.as_ref()
+    pub fn note(&self) -> Option<&str> {
+        self.note.as_deref()
     }
     #[inline]
     fn set_note<T: Into<String>>(&mut self, val: T) -> &mut Self {

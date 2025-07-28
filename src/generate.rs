@@ -184,6 +184,16 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
         if let GetType::String = get_type {
             field_type = &str_type;
         }
+        let mut opt_string = false;
+        if let FieldType::Option(ref opt_ty) = prop_field_type {
+            if opt_ty.len() == 1 && matches!(field_conf.get.typ, GetTypeConf::Auto) {
+                if let Some(syn::GenericArgument::Type(inner_type)) = opt_ty.first() {
+                    if *inner_type == syn::parse_quote! { String } {
+                        opt_string = true;
+                    }
+                }
+            }
+        }
         match get_type {
             GetType::Ref | GetType::String => quote!(
                 #visibility fn #method_name(&self) -> &#field_type {
@@ -205,11 +215,21 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
                     &self.#field_name[..]
                 }
             ),
-            GetType::Option(field_type) => quote!(
-                #visibility fn #method_name(&self) -> Option<&#field_type> {
-                    self.#field_name.as_ref()
+            GetType::Option(field_type) => {
+                if !opt_string {
+                    quote!(
+                        #visibility fn #method_name(&self) -> Option<&#field_type> {
+                            self.#field_name.as_ref()
+                        }
+                    )
+                } else {
+                    quote!(
+                        #visibility fn #method_name(&self) -> Option<&str> {
+                            self.#field_name.as_deref()
+                        }
+                    )
                 }
-            ),
+            }
         }
     }) {
         property.push(ts);
