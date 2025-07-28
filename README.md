@@ -92,7 +92,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std as alloc;
 
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, boxed::Box, vec::Vec};
 
 use property::Property;
 
@@ -110,6 +110,7 @@ pub struct Pet {
     #[property(get(name = "identification"), set(disable))]
     id: [u8; 32],
     name: String,
+    nickname: Box<str>,
     #[property(set(crate, type = "own"))]
     age: u32,
     #[property(get(type = "copy"))]
@@ -148,6 +149,15 @@ impl Pet {
     #[inline]
     fn set_name<T: Into<String>>(&mut self, val: T) -> &mut Self {
         self.name = val.into();
+        self
+    }
+    #[inline]
+    pub fn nickname(&self) -> &str {
+        &self.nickname
+    }
+    #[inline]
+    fn set_nickname<T: Into<Box<str>>>(&mut self, val: T) -> &mut Self {
+        self.nickname = val.into();
         self
     }
     #[inline]

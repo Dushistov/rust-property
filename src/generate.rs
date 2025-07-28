@@ -35,6 +35,7 @@ pub(crate) enum FieldType {
     Boolean,
     Character,
     String,
+    Box(Punctuated<GenericArgument, Comma>),
     Array(syn::TypeArray),
     Vector(syn::Type),
     Option(Punctuated<GenericArgument, Comma>),
@@ -61,6 +62,7 @@ impl GetType {
                 bracket_token: syn::token::Bracket::default(),
                 elem: Box::new(inner_type.clone()),
             }),
+            FieldType::Box(_) => GetType::Ref,
             FieldType::Option(inner_type) => {
                 if inner_type.len() == 1 {
                     if let Some(syn::GenericArgument::Type(inner_type)) = inner_type.first() {
@@ -122,6 +124,14 @@ impl FieldType {
                                 unreachable!()
                             }
                         }
+                        "Box" => {
+                            let syn::PathArguments::AngleBracketed(inner) =
+                                &type_path.path.segments[0].arguments
+                            else {
+                                unreachable!()
+                            };
+                            FieldType::Box(inner.args.clone())
+                        }
                         "Option" => {
                             if let syn::PathArguments::AngleBracketed(inner) =
                                 &type_path.path.segments[0].arguments
@@ -160,6 +170,16 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
             GetTypeConf::Copy => GetType::Copy,
             GetTypeConf::Clone => GetType::Clone,
         };
+        let mut field_type = field_type;
+        if let FieldType::Box(ref boxed_ty) = prop_field_type {
+            if boxed_ty.len() == 1 && matches!(field_conf.get.typ, GetTypeConf::Auto) {
+                if let Some(syn::GenericArgument::Type(inner_type)) = boxed_ty.first() {
+                    if *inner_type == syn::parse_quote! { str } {
+                        field_type = inner_type;
+                    }
+                }
+            }
+        }
         match get_type {
             GetType::Ref => quote!(
                 #visibility fn #method_name(&self) -> &#field_type {
