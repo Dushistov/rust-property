@@ -191,6 +191,9 @@ pub(crate) fn derive_property_for_field(field: &FieldDef) -> Vec<proc_macro2::To
                     if *inner_type == syn::parse_quote! { String } {
                         opt_string = true;
                     }
+                    if *inner_type == syn::parse_quote! { Box<str> } {
+                        opt_string = true;
+                    }
                 }
             }
         }
